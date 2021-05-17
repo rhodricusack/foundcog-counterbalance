@@ -45,10 +45,12 @@ def assess_across_block_adjacency(nvid, order):
 
 if __name__=='__main__':
 
-    counterbalancetype='latinsquare'
+    counterbalancetype='optimised'
     nvid=6
     nsubj=40
     nperm=100
+    noptperm=500
+
 
     repo = git.Repo(search_parent_directories=True)
 
@@ -65,6 +67,21 @@ if __name__=='__main__':
                 nsubblock_orders = nvid    
             elif counterbalancetype=='random':
                 subblock_order_set=generate_subblock_order_set(nvid=nvid, nsubblock_orders=nsubblock_orders)
+            elif counterbalancetype=='optimised':
+                # Optimise order, by generating a random set and picking the one with the minimum across-order adjacency correlation
+                iu1=np.triu_indices(nvid, k=1)
+                cmeanmin=np.inf
+                nsubblock_orders = nvid
+                for optperm in range(noptperm):
+                    subblock_order_set=generate_latin_subblock_order(nvid=nvid) 
+                    order_adjacency=np.zeros((nsubblock_orders, nvid, nvid))     
+                    for orderind in range(nsubblock_orders):
+                        order_adjacency[orderind,:,:] = assess_adjacency(nvid, subblock_order_set[orderind:orderind+1])                    
+                    cmean=np.corrcoef(order_adjacency.reshape(nsubblock_orders, nvid*nvid))[iu1].mean()
+                    if cmean<cmeanmin:
+                        cmeanmin=cmean
+                        optorder=subblock_order_set
+                subblock_order_set = optorder
 
             order_adjacency=np.zeros((nsubblock_orders, nvid, nvid))
             #fig, ax = plt.subplots(nrows=nsubblock_orders, ncols=1)
