@@ -6,6 +6,7 @@ import pandas as pd
 
 import git
 
+
 def generate_latin_subblock_order(nvid=6):
     # not really used any more
     return(latinsquare.rls(nvid))        
@@ -44,7 +45,7 @@ def assess_across_block_adjacency(nvid, order):
 
 if __name__=='__main__':
 
-    counterbalancetype='random'
+    counterbalancetype='latinsquare'
     nvid=6
     nsubj=40
     nperm=100
