@@ -65,22 +65,26 @@ def assess_across_block_adjacency(nvid, order):
 if __name__=='__main__':
 
     counterbalancetype='optimised'   # Choices random | latinsquare | optimised
-    nvid=6
-    nsubj=40
-    nperm=100
-    noptperm=500
+    nvid=6          # number of videos
+    nsubj=40        # number of subjects in a study
+    nperm=100       # number of studies to generate
+    noptperm=500    # when optmising latin squares, do this many  iterations 
 
 
+    # Tag output with git commit
     repo = git.Repo(search_parent_directories=True)
 
-    
+    # To store results
     df=pd.DataFrame()
 
     for nsubblock_orders in range(10,50,5):
+        # When random, create this many subblock orders. Otherwise, it is ignored.
         aba_std=[]
         aba_range=[]
 
         for perm in range(nperm):
+            # For each "study"...
+            # Generate possible subblock orders using one of our strategies
             if counterbalancetype=='latinsquare':
                 subblock_order_set=generate_latin_subblock_order(nvid=nvid)      
                 nsubblock_orders = nvid    
@@ -102,39 +106,35 @@ if __name__=='__main__':
                         optorder=subblock_order_set
                 subblock_order_set = optorder
 
+            # Assess subblock orders
             order_adjacency=np.zeros((nsubblock_orders, nvid, nvid))
-            #fig, ax = plt.subplots(nrows=nsubblock_orders, ncols=1)
             for orderind in range(nsubblock_orders):
                 order_adjacency[orderind,:,:] = assess_adjacency(nvid, subblock_order_set[orderind:orderind+1])
-                # im = ax[orderind].imshow(order_adjacency[orderind,:,:])
-                #fig.colorbar(im, ax = ax[orderind])
-            
+                    
             order_adjacency_reshaped = order_adjacency.reshape(nsubblock_orders, nvid*nvid)
             iu1=np.triu_indices(nsubblock_orders, k=1)
             c=np.corrcoef(order_adjacency_reshaped)
             c_iu1=c[iu1]
 
-            # plt.figure()
-            # im = plt.imshow(c)
-            # fig.colorbar(im)
-            # plt.show()
-
             allsubj_adjacency = np.zeros((nvid,nvid))
             allsubj_across_block_adjacency = np.zeros((nvid,nvid))
             
+            # Create a single study
             for subj in range(nsubj):
+                # Create each subject and calculate their metrics
                 order = generate_order(subblock_order_set)
                 allsubj_adjacency  = allsubj_adjacency + assess_adjacency(nvid, order)
                 allsubj_across_block_adjacency  = allsubj_across_block_adjacency + assess_across_block_adjacency(nvid, order)
 
-            #print(allsubj_adjacency)
-
+            # Summarise this study and store results
             df = df.append({'aba_range': np.max(allsubj_across_block_adjacency) - np.min(allsubj_across_block_adjacency), 
                     'aba_std':np.std(allsubj_across_block_adjacency),
                     'nsubblock_orders': nsubblock_orders,
                     'mean_c_iu1': np.mean(c_iu1)
                     },ignore_index=True)
     
+    # Plot up
+
     fig,ax = plt.subplots(nrows=2, ncols=2)
     
     sns.violinplot(x=df['nsubblock_orders'].astype(int), y=df['aba_range'], ax=ax[0,0])
@@ -151,8 +151,6 @@ if __name__=='__main__':
     ax[1,1].title.set_text('e.g., between-block adjacency ')
     fig.colorbar(im1, ax=ax[1,1])
     
-   
-
     plt.tight_layout()
 
     plt.savefig(f'{counterbalancetype}_N_{nsubj}_{repo.head.object.hexsha}.jpg')
