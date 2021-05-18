@@ -6,12 +6,28 @@ import pandas as pd
 
 import git
 
+'''
+Evaluate counterbalancing stategies for videos in founcog study
+Stimuli for each participant comprise three subblocks of 6-8 videos
+Maybe 40-50 participants but poor control over which data will be usable, making complex counterbalancing stategies difficult.
+Analysis goals:
+- MVPA across 6-8 videos, requiring minimal temporal bias. MVPA will be done across subblocks but need to watch out for balance of videos that are adjacent across subblocks.
+- inter-subject correlation between subjects seeing same subblock of movies. Need as many subjects as possible with given order, while satisfying other constraints. Also plan to analyse effect of context, so want to compare effect of X preceded by Y vs. Z. Requires different orders to have different adjacencies.
+- may be order effects
+
+v1: 2021-05-18 Rhodri Cusack, Trinity College Dublin
+Simulate a set of nsubj=40 subjects nperm=100 times
+Optimise two metrics:
+(1) across subblock adjacency. As MVPA is performed across blocks, need balance of what follows what at block boundaries. So calculate matrix of what follows what (video X -> video Y), and summarise this by the largest difference - i.e., most common adjacency - least common 
+(2) within subblock adjaceny. Want different orders to give movies different contexts (i.e., have different things preceding them). Quantify this by correlation of adjacency matrix of different subblocks orders.
+'''
 
 def generate_latin_subblock_order(nvid=6):
-    # not really used any more
+    # Generate a set of subblock orders following a latin square
     return(latinsquare.rls(nvid))        
 
 def generate_subblock_order_set(nsubblock_orders=20, nvid=6):
+    # Generate a set of random subblock orders 
     subblock_order_set=[]
     for subblock in range(nsubblock_orders):
         order = np.arange(nvid)
@@ -20,8 +36,9 @@ def generate_subblock_order_set(nsubblock_orders=20, nvid=6):
     return subblock_order_set
 
 def generate_order(subblock_order_set, nsubblock=3):
+    # Generate an order for a given subject, by selecting orders from the possible set for each of their subblocks 
     order=[]
-    # Don't repeat orders
+    # Don't repeat orders within a subject. Is this the right thing to do?
     possible_subblock_order = list(range(len(subblock_order_set)))
 
     for subblock in range(nsubblock):
@@ -31,6 +48,7 @@ def generate_order(subblock_order_set, nsubblock=3):
     return(order)
 
 def assess_adjacency(nvid, order):
+    # Calculate what follows what, within and across subblocks, giving nvid * nvid adjacency matrix
     allvids=[x for y in order for x in y]
     adjacency = np.zeros((nvid,nvid))
     for vidind in range(len(allvids)-1):
@@ -38,6 +56,7 @@ def assess_adjacency(nvid, order):
     return adjacency
 
 def assess_across_block_adjacency(nvid, order):
+    # Calculate what follows what across subblocks, giving nvid * nvid adjacency matrix
     adjacency = np.zeros((nvid,nvid))
     for block in range(len(order)-1):
         adjacency[order[block][-1], order[block+1][0]]+=1
@@ -45,7 +64,7 @@ def assess_across_block_adjacency(nvid, order):
 
 if __name__=='__main__':
 
-    counterbalancetype='optimised'
+    counterbalancetype='optimised'   # Choices random | latinsquare | optimised
     nvid=6
     nsubj=40
     nperm=100
