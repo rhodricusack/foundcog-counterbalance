@@ -1,3 +1,4 @@
+from re import sub
 import numpy as np
 import latinsquare
 import seaborn as sns
@@ -64,11 +65,12 @@ def assess_across_block_adjacency(nvid, order):
 
 if __name__=='__main__':
 
-    counterbalancetype='optimised'   # Choices random | latinsquare | optimised
+    counterbalancetype='optimised_balance_pairs'   # Choices random | latinsquare | optimised | optimised_balance_pairs
+    
     nvid=6          # number of videos
     nsubj=40        # number of subjects in a study
     nperm=100       # number of studies to generate
-    noptperm=500    # when optmising latin squares, do this many  iterations 
+    noptperm=5000    # when optmising latin squares, do this many  iterations 
 
 
     # Tag output with git commit
@@ -99,12 +101,41 @@ if __name__=='__main__':
                     subblock_order_set=generate_latin_subblock_order(nvid=nvid) 
                     order_adjacency=np.zeros((nsubblock_orders, nvid, nvid))     
                     for orderind in range(nsubblock_orders):
-                        order_adjacency[orderind,:,:] = assess_adjacency(nvid, subblock_order_set[orderind:orderind+1])                    
+                        order_adjacency[orderind,:,:] = assess_adjacency(nvid, subblock_order_set[orderind:orderind+1])                                       
                     cmean=np.corrcoef(order_adjacency.reshape(nsubblock_orders, nvid*nvid))[iu1].mean()
                     if cmean<cmeanmin:
                         cmeanmin=cmean
                         optorder=subblock_order_set
+            elif counterbalancetype=='optimised_balance_pairs':
+                # Optimise order, by generating a random set and picking the one with the most order adjacency set with most balanced pairs 
+                iu1=np.triu_indices(nvid, k=1)
+                cmeanmin=np.inf
+                nsubblock_orders = nvid
+                for optperm in range(noptperm):
+                    subblock_order_set=generate_latin_subblock_order(nvid=nvid) 
+                    order_adjacency=np.zeros((nsubblock_orders, nvid, nvid))     
+                    for orderind in range(nsubblock_orders):
+                        order_adjacency[orderind,:,:] = assess_adjacency(nvid, subblock_order_set[orderind:orderind+1])                                       
+                    order_adjacency_set = np.sum(order_adjacency, axis =0)
+                                        
+                    maxes = np.max(order_adjacency_set,axis=0)
+                    order_adjacency_set_temp  = order_adjacency_set.copy()
+                    order_adjacency_set_temp[order_adjacency_set_temp == 0] = 999 # want min of non-zero entries only, so put the zeros out of the range 
+                    mins = np.min(order_adjacency_set_temp,axis=0) 
+
+                    # Want max and min to be 2 and 3 or 3 and 2
+                    cost = np.sum(np.power(maxes-2.5, 2)) + np.sum(np.power(mins-2.5, 2))  
+
+                   
+                    if cost<cmeanmin:
+                        cmeanmin=cost
+                        optorder=subblock_order_set
+                        print(cost)
+                        print (order_adjacency_set)
+
                 subblock_order_set = optorder
+
+                print(subblock_order_set)
 
             # Assess subblock orders
             order_adjacency=np.zeros((nsubblock_orders, nvid, nvid))
